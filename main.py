@@ -90,10 +90,9 @@ def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, s
     cbar = plt.colorbar(cm.ScalarMappable(norm=None, cmap=cmap), ax=ax)
     cbar.ax.set_ylabel('RISK', rotation=0, fontsize = 14)
     
-    #####################################################
-    #force 'autoscale'
+
     ymin, ymax = 0.9*np.min(pair_price), 1.1*np.max(pair_price)
-    #####################################################
+
     z = []
     z_string = []
     for i in [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0, 1.4, 2, 4, 7, 10, 15, 20, 30, 40, 50, 60, 80, 150, 300, 500, 750, 1000, 1500, 2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 40000, 50000, 60000, 70000]:
