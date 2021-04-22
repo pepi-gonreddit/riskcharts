@@ -3,11 +3,8 @@ import json
 import pandas as pd    
 import numpy as np     
 import matplotlib.pyplot as plt
-import datetime as dt  
-
+import datetime as dt 
 from matplotlib import cm
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
-import matplotlib.ticker as ticker
 
 
 def get_bars(symbol, interval):
@@ -27,14 +24,14 @@ def get_bars(symbol, interval):
 def get_price(pair):
     return np.array(pair)
 
-def get_EMA(pair_price, value):
-    EMA = value*[None]
+def get_SMA(pair_price, value):
+    SMA = value*[None]
 
     for i in range(value, len(pair_price)):
-        tempEMA = np.average(pair_price[i-20:i])
-        EMA.append(tempEMA)
+        tempSMA = np.average(pair_price[i-20:i])
+        SMA.append(tempSMA)
 
-    return EMA
+    return SMA
 
 def get_std_deviation(pair_price, pair_EMA):
     
@@ -53,24 +50,62 @@ def get_std_deviation(pair_price, pair_EMA):
 
     return std_deviation
 
-def get_risk(pair_price, pair_EMA):
+def get_risk(pair_price, pair_EMA, EMA_value):
     
     deviation = len(pair_price)*[0]
+    min_deviation = len(pair_price)*[0]
+    max_deviation = len(pair_price)*[0]
     
     for k in range(len(pair_price)):
         try:
-            deviation[k] = (pair_price[k] - pair_EMA[k])/pair_EMA[k]
+            deviation[k] = pair_price[k]/pair_EMA[k] - 1
         except:
             pass
-    
-    min_deviation = min(deviation)
-    max_deviation = max(deviation)
+
+        if k > 4*EMA_value:
+            amplifier = 0.3*pair_EMA[k]/min(pair_EMA[k - 3*EMA_value:k])
+
+        elif k > EMA_value:
+            amplifier = 0.3*pair_EMA[k]/min(pair_EMA[EMA_value:k])
+        
+        else:
+            amplifier = 0.3*pair_price[k]/min(pair_price[:k+1])
+        
+        deviation[k] = amplifier + deviation[k]
+
+        min_deviation[k] = min(deviation[:k+1]) - 0.01
+        max_deviation[k] = max(deviation[:k+1]) + 0.01
 
     risk = len(pair_price)*[None]
     for l in range(len(pair_price)):
-        risk[l] = (deviation[l] - min_deviation)/(max_deviation - min_deviation)
+        risk[l] = (deviation[l] - min_deviation[l])/(max_deviation[l] - min_deviation[l])
 
     return risk
+
+def get_ratio(pair_price, pair_EMA):
+
+    pair_ratio = len(pair_price)*[0]
+    for i in range(len(pair_price)):
+        try:
+            pair_ratio[i] = (pair_price[i]/pair_EMA[i])
+        except:
+            continue
+
+    return pair_ratio
+
+def get_normal_ratio(pair_price, pair_EMA):
+    pair_ratio = get_ratio(pair_price, pair_EMA)
+
+    min_ratio = min(pair_ratio)
+    max_ratio = max(pair_ratio)
+
+    normal_ratio = len(pair_ratio)*[None]
+
+    for o in range(len(pair_ratio)):
+        normal_ratio[o] = (pair_ratio[o] - min_ratio)/(max_ratio - min_ratio)
+
+
+    return normal_ratio
 
 def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, std_deviation, pair_time):
     cmap = cm.get_cmap('jet', 32)
@@ -85,17 +120,17 @@ def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, s
     ax.set_facecolor('grey')
     ax.set_yscale('log')
       
+    
     plt.title(pair[:-4] + r'/USDT: price, EMA' + str(value) + r' $\pm$ $\sigma$' + ' || ' + r'$\sigma$ = ' + str(std_deviation)[:5], fontsize = 16)
 
     cbar = plt.colorbar(cm.ScalarMappable(norm=None, cmap=cmap), ax=ax)
     cbar.ax.set_ylabel('RISK', rotation=0, fontsize = 14)
     
-
     ymin, ymax = 0.9*np.min(pair_price), 1.1*np.max(pair_price)
 
     z = []
     z_string = []
-    for i in [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0, 1.4, 2, 4, 7, 10, 15, 20, 30, 40, 50, 60, 80, 150, 300, 500, 750, 1000, 1500, 2000, 2500, 5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 40000, 50000, 60000, 70000]:
+    for i in [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0, 1.4, 2, 4, 7, 10, 15, 20, 30, 40, 50, 60, 80, 150, 300, 500, 750, 1000, 1500, 2000, 2500, 2800, 5000, 7500, 10000, 12500, 15000, 20000, 25000, 30000, 40000, 50000, 60000, 70000]:
 
         if i > ymin and i < ymax:
             z.append(i)
@@ -128,10 +163,13 @@ def showplot():
     
 ############################################################################################################
 pairlist = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'LINKUSDT', 'DOTUSDT']
+#pairlist = ['XMRUSDT', 'AVAXUSDT', 'FILUSDT', 'BNBUSDT', 'LUNAUSDT']
+#pairlist = ['XLMUSDT', 'NEOUSDT', 'VETUSDT', 'TRXUSDT', 'SOLUSDT']
+#pairlist = ['ONEUSDT', 'ALGOUSDT', 'XRPUSDT', 'DOGEUSDT']
 
 for pair in pairlist:
     timeframe = '1d'
-    EMA_value = 30
+    SMA_value = 30
 
     pair_bars_full = get_bars(pair, timeframe)
     pair_bars = pair_bars_full['c'].astype('float')
@@ -139,12 +177,12 @@ for pair in pairlist:
     pair_time = pair_bars.index
 
     pair_price = get_price(pair_bars)
-    pair_EMA = get_EMA(pair_price, EMA_value)
-    std_deviation = get_std_deviation(pair_price, pair_EMA)
+    pair_SMA = get_SMA(pair_price, SMA_value)
+    std_deviation = get_std_deviation(pair_price, pair_SMA)
 
-    pair_risk = get_risk(pair_price, pair_EMA)
+    pair_risk = get_risk(pair_price, pair_SMA, SMA_value)
 
-    plot_pricevsEMA(pair_price, pair_EMA, pair_risk, pair, timeframe, EMA_value, std_deviation, pair_time)
-    plot_onestddev(pair_EMA, std_deviation, pair_time)
+    plot_pricevsEMA(pair_price, pair_SMA, pair_risk, pair, timeframe, SMA_value, std_deviation, pair_time)
+    plot_onestddev(pair_SMA, std_deviation, pair_time)
     
     showplot()
