@@ -33,13 +33,13 @@ def get_SMA(pair_price, value):
 
     return SMA
 
-def get_std_deviation(pair_price, pair_EMA):
+def get_std_deviation(pair_price, pair_SMA):
     
     squared_deviation = len(pair_price)*[None]
     
     for k in range(len(pair_price)):
         try:
-            squared_deviation[k] = (pair_price[k]/pair_EMA[k] - 1)**2
+            squared_deviation[k] = (pair_price[k]/pair_SMA[k] - 1)**2
         except:
             pass
     
@@ -50,7 +50,7 @@ def get_std_deviation(pair_price, pair_EMA):
 
     return std_deviation
 
-def get_risk(pair_price, pair_EMA, EMA_value):
+def get_risk(pair_price, pair_SMA, SMA_value):
     
     deviation = len(pair_price)*[0]
     min_deviation = len(pair_price)*[0]
@@ -58,18 +58,18 @@ def get_risk(pair_price, pair_EMA, EMA_value):
     
     for k in range(len(pair_price)):
         try:
-            deviation[k] = pair_price[k]/pair_EMA[k] - 1
+            deviation[k] = pair_price[k]/pair_SMA[k] - 1
         except:
             pass
 
-        if k > 4*EMA_value:
-            amplifier = 0.3*pair_EMA[k]/min(pair_EMA[k - 3*EMA_value:k])
+        if k > 4*SMA_value:
+            amplifier = 0.2*pair_SMA[k]/min(pair_SMA[k - 3*SMA_value:k])
 
-        elif k > EMA_value:
-            amplifier = 0.3*pair_EMA[k]/min(pair_EMA[EMA_value:k])
+        elif k > SMA_value:
+            amplifier = 0.2*pair_SMA[k]/min(pair_SMA[SMA_value:k])
         
         else:
-            amplifier = 0.3*pair_price[k]/min(pair_price[:k+1])
+            amplifier = 0.2*pair_price[k]/min(pair_price[:k+1])
         
         deviation[k] = amplifier + deviation[k]
 
@@ -82,19 +82,19 @@ def get_risk(pair_price, pair_EMA, EMA_value):
 
     return risk
 
-def get_ratio(pair_price, pair_EMA):
+def get_ratio(pair_price, pair_SMA):
 
     pair_ratio = len(pair_price)*[0]
     for i in range(len(pair_price)):
         try:
-            pair_ratio[i] = (pair_price[i]/pair_EMA[i])
+            pair_ratio[i] = (pair_price[i]/pair_SMA[i])
         except:
             continue
 
     return pair_ratio
 
-def get_normal_ratio(pair_price, pair_EMA):
-    pair_ratio = get_ratio(pair_price, pair_EMA)
+def get_normal_ratio(pair_price, pair_SMA):
+    pair_ratio = get_ratio(pair_price, pair_SMA)
 
     min_ratio = min(pair_ratio)
     max_ratio = max(pair_ratio)
@@ -107,7 +107,7 @@ def get_normal_ratio(pair_price, pair_EMA):
 
     return normal_ratio
 
-def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, std_deviation, pair_time):
+def plot_pricevsSMA(pair_price, pair_SMA, color_scale, pair, timeframe, value, std_deviation, pair_time):
     cmap = cm.get_cmap('jet', 32)
 
     for j in range(len(pair_price)):
@@ -121,7 +121,7 @@ def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, s
     ax.set_yscale('log')
       
     
-    plt.title(pair[:-4] + r'/USDT: price, EMA' + str(value) + r' $\pm$ $\sigma$' + ' || ' + r'$\sigma$ = ' + str(std_deviation)[:5], fontsize = 16)
+    plt.title(pair[:-4] + r'/USDT: price, SMA' + str(value) + r' $\pm$ $\sigma$' + ' || ' + r'$\sigma$ = ' + str(std_deviation)[:5], fontsize = 16)
 
     cbar = plt.colorbar(cm.ScalarMappable(norm=None, cmap=cmap), ax=ax)
     cbar.ax.set_ylabel('RISK', rotation=0, fontsize = 14)
@@ -139,17 +139,17 @@ def plot_pricevsEMA(pair_price, pair_EMA, color_scale, pair, timeframe, value, s
     ax.set_yticks(z)
     ax.set_yticklabels(z_string)        
     
-    plt.plot(pair_time, pair_EMA, 'black')
+    plt.plot(pair_time, pair_SMA, 'black')
     
 
-def plot_onestddev(pair_EMA, std_deviation, pair_time):
-    onestddevup = len(pair_EMA)*[None]
-    onestddevdown = len(pair_EMA)*[None]
+def plot_onestddev(pair_SMA, std_deviation, pair_time):
+    onestddevup = len(pair_SMA)*[None]
+    onestddevdown = len(pair_SMA)*[None]
 
-    for p in range(len(pair_EMA)):
+    for p in range(len(pair_SMA)):
         try:
-            onestddevup[p] = (1 + std_deviation) * pair_EMA[p]
-            onestddevdown[p] = (1 - std_deviation) * pair_EMA[p]
+            onestddevup[p] = (1 + std_deviation) * pair_SMA[p]
+            onestddevdown[p] = (1 - std_deviation) * pair_SMA[p]
         except:
             continue
 
@@ -182,7 +182,7 @@ for pair in pairlist:
 
     pair_risk = get_risk(pair_price, pair_SMA, SMA_value)
 
-    plot_pricevsEMA(pair_price, pair_SMA, pair_risk, pair, timeframe, SMA_value, std_deviation, pair_time)
+    plot_pricevsSMA(pair_price, pair_SMA, pair_risk, pair, timeframe, SMA_value, std_deviation, pair_time)
     plot_onestddev(pair_SMA, std_deviation, pair_time)
     
     showplot()
